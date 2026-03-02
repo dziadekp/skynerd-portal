@@ -63,17 +63,23 @@ export default function UploadPage() {
         throw new Error(urlRes.error || "Failed to get upload URL");
       }
 
-      // 2. Upload directly to S3
+      // 2. Upload via server-side proxy (avoids S3 CORS issues)
       const { signed_id, upload_url, upload_headers } = urlRes.data;
 
-      const uploadRes = await fetch(upload_url, {
-        method: "PUT",
-        headers: upload_headers,
-        body: uploadFile.file,
+      const proxyForm = new FormData();
+      proxyForm.append("file", uploadFile.file);
+      proxyForm.append("upload_url", upload_url);
+      proxyForm.append("upload_headers", JSON.stringify(upload_headers));
+
+      const uploadRes = await fetch("/api/upload-proxy", {
+        method: "POST",
+        body: proxyForm,
+        credentials: "include",
       });
 
       if (!uploadRes.ok) {
-        throw new Error("Upload to storage failed");
+        const err = await uploadRes.json().catch(() => ({}));
+        throw new Error(err.error || "Upload to storage failed");
       }
 
       setFiles((prev) =>

@@ -3,14 +3,12 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useFolders } from "@/hooks/use-api";
-import { api } from "@/lib/api-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import type { UploadUrlResponse } from "@/lib/types";
 
 interface UploadFile {
   file: File;
@@ -45,31 +43,20 @@ export default function UploadPage() {
 
   async function uploadFile(uploadFile: UploadFile, index: number) {
     setFiles((prev) =>
-      prev.map((f, i) => (i === index ? { ...f, status: "uploading" } : f))
+      prev.map((f, i) => (i === index ? { ...f, status: "uploading", progress: 10 } : f))
     );
 
     try {
-      // 1. Get signed upload URL
-      const checksum = btoa(String(uploadFile.file.size)); // simplified checksum
-      const urlRes = await api.post<UploadUrlResponse>("/api/portal/documents/upload-url", {
-        filename: uploadFile.file.name,
-        content_type: uploadFile.file.type || "application/octet-stream",
-        byte_size: uploadFile.file.size,
-        checksum,
-        folder_id: folderId || null,
-      });
-
-      if (urlRes.error || !urlRes.data) {
-        throw new Error(urlRes.error || "Failed to get upload URL");
-      }
-
-      // 2. Upload via server-side proxy (avoids S3 CORS issues)
-      const { signed_id, upload_url, upload_headers } = urlRes.data;
-
+      // Single server-side call: MD5 + signed URL + S3 PUT + attach
       const proxyForm = new FormData();
       proxyForm.append("file", uploadFile.file);
-      proxyForm.append("upload_url", upload_url);
-      proxyForm.append("upload_headers", JSON.stringify(upload_headers));
+      if (folderId) {
+        proxyForm.append("folder_id", folderId);
+      }
+
+      setFiles((prev) =>
+        prev.map((f, i) => (i === index ? { ...f, progress: 30 } : f))
+      );
 
       const uploadRes = await fetch("/api/upload-proxy", {
         method: "POST",
@@ -79,20 +66,8 @@ export default function UploadPage() {
 
       if (!uploadRes.ok) {
         const err = await uploadRes.json().catch(() => ({}));
-        throw new Error(err.error || "Upload to storage failed");
+        throw new Error(err.error || "Upload failed");
       }
-
-      setFiles((prev) =>
-        prev.map((f, i) => (i === index ? { ...f, progress: 80 } : f))
-      );
-
-      // 3. Attach file to folder
-      await api.post("/api/portal/documents/attach", {
-        folder_id: folderId || urlRes.data.folder_id,
-        signed_id,
-        filename: uploadFile.file.name,
-        content_type: uploadFile.file.type || "application/octet-stream",
-      });
 
       setFiles((prev) =>
         prev.map((f, i) =>

@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useTasks, useTaskSummary } from "@/hooks/use-api";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -143,6 +145,34 @@ export default function TasksPage() {
                           </span>
                         )}
                       </div>
+
+                      {/* Action buttons for Truss tasks */}
+                      {!task.completed && task.action_url && (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {task.action_type === "upload" ? (
+                            <Link href={task.action_url}>
+                              <Button size="sm" variant="default" className="h-7 text-xs gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                                Upload Documents
+                              </Button>
+                            </Link>
+                          ) : task.action_type === "sign" ? (
+                            <a href={task.action_url} target="_blank" rel="noopener noreferrer">
+                              <Button size="sm" variant="default" className="h-7 text-xs gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838.838-2.872a2 2 0 0 1 .506-.855z"/></svg>
+                                Sign in Truss
+                              </Button>
+                            </a>
+                          ) : task.source === "truss" ? (
+                            <a href={task.action_url} target="_blank" rel="noopener noreferrer">
+                              <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+                                View in Truss
+                              </Button>
+                            </a>
+                          ) : null}
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

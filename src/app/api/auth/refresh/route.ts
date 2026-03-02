@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { INTERNAL_API_URL } from "@/lib/constants";
+import { getInternalApiUrl } from "@/lib/server-utils";
 
 export async function POST(request: NextRequest) {
   const refreshToken = request.cookies.get("refresh_token")?.value;
@@ -9,7 +9,8 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const res = await fetch(`${INTERNAL_API_URL}/api/portal/auth/refresh/`, {
+    const apiUrl = getInternalApiUrl();
+    const res = await fetch(`${apiUrl}/api/portal/auth/refresh/`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ refresh: refreshToken }),

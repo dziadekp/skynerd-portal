@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { INTERNAL_API_URL } from "@/lib/constants";
+import { getInternalApiUrl } from "@/lib/server-utils";
 
 export async function POST(request: NextRequest) {
   const refreshToken = request.cookies.get("refresh_token")?.value;
@@ -7,7 +7,8 @@ export async function POST(request: NextRequest) {
   // Try to blacklist the token server-side (best effort)
   if (refreshToken) {
     try {
-      await fetch(`${INTERNAL_API_URL}/api/portal/auth/logout/`, {
+      const apiUrl = getInternalApiUrl();
+      await fetch(`${apiUrl}/api/portal/auth/logout/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ refresh: refreshToken }),

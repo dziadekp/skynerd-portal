@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { INTERNAL_API_URL } from "@/lib/constants";
+import { getInternalApiUrl } from "@/lib/server-utils";
 
 // BFF proxy: forwards all /api/portal/* calls to Django with JWT from cookie
 async function proxyRequest(
@@ -16,7 +16,8 @@ async function proxyRequest(
   const backendPath = path.join("/");
   const url = new URL(request.url);
   const queryString = url.search;
-  const backendUrl = `${INTERNAL_API_URL}/api/portal/${backendPath}/${queryString}`;
+  const apiUrl = getInternalApiUrl();
+  const backendUrl = `${apiUrl}/api/portal/${backendPath}/${queryString}`;
 
   const headers: HeadersInit = {
     Authorization: `Bearer ${accessToken}`,

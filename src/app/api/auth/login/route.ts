@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
-import { INTERNAL_API_URL } from "@/lib/constants";
+import { getInternalApiUrl } from "@/lib/server-utils";
 
 export async function POST(request: NextRequest) {
+  const apiUrl = getInternalApiUrl();
+  const targetUrl = `${apiUrl}/api/portal/auth/login/`;
+
   try {
     const body = await request.json();
 
-    const res = await fetch(`${INTERNAL_API_URL}/api/portal/auth/login/`, {
+    const res = await fetch(targetUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -41,9 +44,10 @@ export async function POST(request: NextRequest) {
     });
 
     return response;
-  } catch {
+  } catch (err) {
+    console.error(`[Login] Failed to connect to ${targetUrl}:`, err);
     return NextResponse.json(
-      { error: "Failed to connect to server" },
+      { error: "Failed to connect to server", debug: { targetUrl, apiUrl } },
       { status: 502 }
     );
   }

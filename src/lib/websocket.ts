@@ -29,9 +29,9 @@ export function createPortalWebSocket(options: WebSocketOptions) {
     if (!wsTokenRes.ok) return;
     const { token } = await wsTokenRes.json();
 
-    // Build WS URL
+    // Build WS URL — strip protocol and trailing slash
     const wsProtocol = API_BASE_URL.startsWith("https") ? "wss" : "ws";
-    const wsHost = API_BASE_URL.replace(/^https?:\/\//, "");
+    const wsHost = API_BASE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
     const wsUrl = `${wsProtocol}://${wsHost}/ws/portal-chat/room/${options.roomId}/?token=${token}`;
 
     ws = new WebSocket(wsUrl);

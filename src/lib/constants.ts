@@ -17,11 +17,21 @@ export const TIMELINE_STAGES = [
 ] as const;
 
 export const TASK_STATUS_COLORS: Record<string, string> = {
-  open: "bg-blue-100 text-blue-800",
-  in_progress: "bg-yellow-100 text-yellow-800",
-  completed: "bg-green-100 text-green-800",
-  blocked: "bg-red-100 text-red-800",
-  overdue: "bg-red-100 text-red-800",
+  todo: "bg-blue-100 text-blue-800 border border-blue-200",
+  open: "bg-blue-100 text-blue-800 border border-blue-200",
+  in_progress: "bg-yellow-100 text-yellow-800 border border-yellow-200",
+  completed: "bg-green-100 text-green-800 border border-green-200",
+  approved: "bg-emerald-100 text-emerald-800 border border-emerald-200",
+  under_review: "bg-purple-100 text-purple-800 border border-purple-200",
+  review: "bg-purple-100 text-purple-800 border border-purple-200",
+  client_review: "bg-indigo-100 text-indigo-800 border border-indigo-200",
+  pending: "bg-amber-100 text-amber-800 border border-amber-200",
+  waiting: "bg-amber-100 text-amber-800 border border-amber-200",
+  blocked: "bg-red-100 text-red-800 border border-red-200",
+  overdue: "bg-red-100 text-red-800 border border-red-200",
+  cancelled: "bg-gray-100 text-gray-600 border border-gray-200",
+  filed: "bg-teal-100 text-teal-800 border border-teal-200",
+  in_preparation: "bg-orange-100 text-orange-800 border border-orange-200",
 };
 
 export const PRIORITY_COLORS: Record<string, string> = {

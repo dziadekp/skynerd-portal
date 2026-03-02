@@ -119,19 +119,19 @@ export default function TasksPage() {
 
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <span className={cn(
-                          "rounded px-2 py-0.5 text-[10px] font-medium capitalize",
-                          TASK_STATUS_COLORS[task.status] || "bg-gray-100 text-gray-700"
+                          "inline-flex items-center rounded-md px-2.5 py-1 text-xs font-semibold capitalize",
+                          TASK_STATUS_COLORS[task.status] || "bg-gray-100 text-gray-700 border border-gray-200"
                         )}>
-                          {task.status.replace("_", " ")}
+                          {task.status.replace(/_/g, " ")}
                         </span>
                         {task.is_overdue && (
-                          <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                          <Badge variant="destructive" className="text-xs px-2.5 py-1 font-semibold">
                             Overdue
                           </Badge>
                         )}
                         {task.priority && (
                           <span className={cn(
-                            "rounded px-1.5 py-0.5 text-[10px] font-medium capitalize",
+                            "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium capitalize",
                             PRIORITY_COLORS[task.priority]
                           )}>
                             {task.priority}

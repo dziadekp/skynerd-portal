@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { setStoredUser, setStoredAccount } from "@/lib/auth";
 
-export default function AutoLoginPage() {
+function AutoLoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
@@ -49,20 +49,24 @@ export default function AutoLoginPage() {
 
   if (error) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="text-center">
-          <p className="text-sm text-red-500 mb-4">{error}</p>
-          <a href="/login" className="text-sm text-primary underline">
-            Go to login
-          </a>
-        </div>
+      <div className="text-center">
+        <p className="text-sm text-red-500 mb-4">{error}</p>
+        <a href="/login" className="text-sm text-primary underline">
+          Go to login
+        </a>
       </div>
     );
   }
 
+  return <p className="text-sm text-muted-foreground">Signing in...</p>;
+}
+
+export default function AutoLoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center">
-      <p className="text-sm text-muted-foreground">Signing in...</p>
+      <Suspense fallback={<p className="text-sm text-muted-foreground">Signing in...</p>}>
+        <AutoLoginContent />
+      </Suspense>
     </div>
   );
 }

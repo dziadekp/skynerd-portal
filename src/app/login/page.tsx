@@ -93,9 +93,11 @@ export default function LoginPage() {
       <div className="w-full max-w-md space-y-8">
         {/* Logo / Brand */}
         <div className="text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-primary-foreground text-2xl font-bold shadow-lg">
-            S
-          </div>
+          <img
+            src="/ptn-logo.png"
+            alt="PTN Accounting"
+            className="mx-auto h-14 w-14 rounded-2xl shadow-lg object-cover"
+          />
           <h1 className="mt-4 text-2xl font-bold tracking-tight text-gray-900">
             Client Portal
           </h1>

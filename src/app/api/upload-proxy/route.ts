@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const folderId = (formData.get("folder_id") as string) || null;
+    const taskId = (formData.get("task_id") as string) || null;
 
     if (!file) {
       return NextResponse.json({ error: "Missing file" }, { status: 400 });
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     console.log(
       `[upload-proxy] File: "${sanitizedFilename}", size=${file.size}, ` +
-      `buffer=${fileBytes.length}, type=${contentType}, folder=${folderId}`
+      `buffer=${fileBytes.length}, type=${contentType}, folder=${folderId}, task=${taskId}`
     );
 
     // 2. Request signed upload URL from Django -> Truss ActiveStorage
@@ -150,20 +151,27 @@ export async function POST(request: NextRequest) {
 
     console.log(`[upload-proxy] S3 PUT success`);
 
-    // 4. Attach uploaded file to Truss folder
+    // 4. Attach uploaded file to Truss folder (with optional task linkage)
     const attachFolderId = folderId || urlData.folder_id;
     if (attachFolderId && signed_id) {
+      const attachPayload: Record<string, string> = {
+        folder_id: attachFolderId,
+        signed_id,
+        filename: sanitizedFilename,
+        content_type: contentType,
+      };
+      // When task_id is provided, the backend passes it to Truss
+      // add_files_to_folder — this links the file as a task touchpoint
+      if (taskId) {
+        attachPayload.task_id = taskId;
+      }
+
       const attachRes = await fetch(
         `${apiUrl}/api/portal/documents/attach/`,
         {
           method: "POST",
           headers: authHeaders,
-          body: JSON.stringify({
-            folder_id: attachFolderId,
-            signed_id,
-            filename: sanitizedFilename,
-            content_type: contentType,
-          }),
+          body: JSON.stringify(attachPayload),
         }
       );
 

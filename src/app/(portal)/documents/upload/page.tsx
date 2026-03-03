@@ -69,6 +69,10 @@ function UploadPageInner() {
       if (folderId) {
         proxyForm.append("folder_id", folderId);
       }
+      // Pass task_id so the file gets linked as a touchpoint on the task
+      if (taskId) {
+        proxyForm.append("task_id", taskId);
+      }
 
       setFiles((prev) =>
         prev.map((f, i) => (i === index ? { ...f, progress: 30 } : f))

@@ -20,10 +20,14 @@ interface UploadFile {
 function UploadPageInner() {
   const searchParams = useSearchParams();
   const initialFolderId = searchParams.get("folder_id") || "";
+  const taskId = searchParams.get("task_id") || "";
+  const projectId = searchParams.get("project_id") || "";
+  const isTaskUpload = Boolean(taskId && projectId);
 
   const [files, setFiles] = useState<UploadFile[]>([]);
   const [folderId, setFolderId] = useState<string>(initialFolderId);
   const [isDragging, setIsDragging] = useState(false);
+  const [isCompletingTask, setIsCompletingTask] = useState(false);
   const { data: folders } = useFolders();
   const router = useRouter();
 
@@ -99,6 +103,42 @@ function UploadPageInner() {
     }
   }
 
+  /**
+   * After successful uploads, mark the Truss task as pending_review.
+   * This tells the accountant the client has submitted their documents.
+   */
+  async function completeTask(): Promise<boolean> {
+    if (!isTaskUpload) return false;
+
+    try {
+      setIsCompletingTask(true);
+      const res = await fetch(
+        `/api/portal/tasks/${projectId}/${taskId}/complete/`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error("[upload] Task completion failed:", err);
+        // Don't fail the whole flow — upload succeeded, task update is best-effort
+        toast.error("Documents uploaded, but couldn't update task status. Your accountant will see the files.");
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error("[upload] Task completion error:", err);
+      toast.error("Documents uploaded, but couldn't update task status.");
+      return false;
+    } finally {
+      setIsCompletingTask(false);
+    }
+  }
+
   async function handleUploadAll() {
     let successCount = 0;
     for (let i = 0; i < files.length; i++) {
@@ -107,8 +147,19 @@ function UploadPageInner() {
         if (ok) successCount++;
       }
     }
+
     if (successCount > 0) {
-      toast.success(`${successCount} file(s) uploaded successfully`);
+      // If this upload was triggered from a task, mark the task as pending_review
+      if (isTaskUpload) {
+        const taskCompleted = await completeTask();
+        if (taskCompleted) {
+          toast.success(
+            `${successCount} file(s) uploaded and task marked for review!`
+          );
+        }
+      } else {
+        toast.success(`${successCount} file(s) uploaded successfully`);
+      }
     }
   }
 
@@ -116,8 +167,29 @@ function UploadPageInner() {
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Upload Documents</h1>
-        <p className="text-muted-foreground">Upload files to your account</p>
+        <p className="text-muted-foreground">
+          {isTaskUpload
+            ? "Upload the requested documents to complete your task"
+            : "Upload files to your account"}
+        </p>
       </div>
+
+      {/* Task context banner */}
+      {isTaskUpload && (
+        <Card className="border-blue-200 bg-blue-50">
+          <CardContent className="flex items-start gap-3 p-4">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 shrink-0 text-blue-600"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            <div>
+              <p className="text-sm font-medium text-blue-900">
+                Task upload
+              </p>
+              <p className="text-xs text-blue-700 mt-0.5">
+                Once you upload the files, this task will automatically be marked as submitted for review.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Folder selector */}
       {folders && folders.length > 0 && (
@@ -208,11 +280,16 @@ function UploadPageInner() {
       {/* Actions */}
       {files.length > 0 && (
         <div className="flex gap-3">
-          <Button onClick={handleUploadAll} disabled={!files.some((f) => f.status === "pending")}>
-            Upload {files.filter((f) => f.status === "pending").length} file(s)
+          <Button
+            onClick={handleUploadAll}
+            disabled={!files.some((f) => f.status === "pending") || isCompletingTask}
+          >
+            {isCompletingTask
+              ? "Completing task..."
+              : `Upload ${files.filter((f) => f.status === "pending").length} file(s)`}
           </Button>
-          <Button variant="outline" onClick={() => router.push("/documents")}>
-            Back to Documents
+          <Button variant="outline" onClick={() => router.push(isTaskUpload ? "/tasks" : "/documents")}>
+            {isTaskUpload ? "Back to Tasks" : "Back to Documents"}
           </Button>
         </div>
       )}

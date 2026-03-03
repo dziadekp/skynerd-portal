@@ -4,10 +4,11 @@ import Link from "next/link";
 import { useChatRooms } from "@/hooks/use-api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function ChatPage() {
-  const { data: rooms, isLoading } = useChatRooms();
+  const { data: rooms, isLoading, isError, refetch } = useChatRooms();
 
   return (
     <div className="space-y-6">
@@ -22,6 +23,16 @@ export default function ChatPage() {
             <Skeleton key={i} className="h-20 rounded-xl" />
           ))}
         </div>
+      ) : isError ? (
+        <Card className="border-0 shadow-sm">
+          <CardContent className="flex flex-col items-center gap-3 p-8 text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="text-muted-foreground/50"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+            <p className="text-muted-foreground">Unable to load messages.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              Try again
+            </Button>
+          </CardContent>
+        </Card>
       ) : rooms?.length === 0 ? (
         <Card className="border-0 shadow-sm">
           <CardContent className="p-8 text-center">

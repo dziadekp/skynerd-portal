@@ -8,61 +8,79 @@ interface WebSocketOptions {
   onTyping?: (data: { user_id: number; user_name: string; is_typing: boolean }) => void;
   onOpen?: () => void;
   onClose?: () => void;
-  onError?: (error: Event) => void;
+  onError?: (error: Event | Error) => void;
 }
 
+const MAX_RECONNECT_ATTEMPTS = 5;
+
 export function createPortalWebSocket(options: WebSocketOptions) {
-  // Get the JWT token for WS auth — we need it from the cookie via an API call
   let ws: WebSocket | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let isDestroyed = false;
+  let reconnectAttempts = 0;
 
   async function connect() {
     if (isDestroyed) return;
 
-    // Fetch a fresh access token for WS
-    const tokenRes = await fetch("/api/auth/me", { credentials: "include" });
-    if (!tokenRes.ok) return;
+    try {
+      // Fetch a fresh access token for WS
+      const tokenRes = await fetch("/api/auth/me", { credentials: "include" });
+      if (!tokenRes.ok) {
+        options.onError?.(new Error("Authentication failed"));
+        options.onClose?.();
+        return;
+      }
 
-    // We need the raw access token for WS. Get it from a dedicated endpoint.
-    const wsTokenRes = await fetch("/api/auth/ws-token", { credentials: "include" });
-    if (!wsTokenRes.ok) return;
-    const { token } = await wsTokenRes.json();
+      const wsTokenRes = await fetch("/api/auth/ws-token", { credentials: "include" });
+      if (!wsTokenRes.ok) {
+        options.onError?.(new Error("Failed to get WebSocket token"));
+        options.onClose?.();
+        return;
+      }
+      const { token } = await wsTokenRes.json();
 
-    // Build WS URL — strip protocol and trailing slash
-    const wsProtocol = API_BASE_URL.startsWith("https") ? "wss" : "ws";
-    const wsHost = API_BASE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
-    const wsUrl = `${wsProtocol}://${wsHost}/ws/portal-chat/room/${options.roomId}/?token=${token}`;
+      // Build WS URL
+      const wsProtocol = API_BASE_URL.startsWith("https") ? "wss" : "ws";
+      const wsHost = API_BASE_URL.replace(/^https?:\/\//, "").replace(/\/$/, "");
+      const wsUrl = `${wsProtocol}://${wsHost}/ws/portal-chat/room/${options.roomId}/?token=${token}`;
 
-    ws = new WebSocket(wsUrl);
+      ws = new WebSocket(wsUrl);
 
-    ws.onopen = () => {
-      options.onOpen?.();
-    };
+      ws.onopen = () => {
+        reconnectAttempts = 0;
+        options.onOpen?.();
+      };
 
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "typing") {
-          options.onTyping?.(data);
-        } else {
-          options.onMessage(data);
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === "typing") {
+            options.onTyping?.(data);
+          } else {
+            options.onMessage(data);
+          }
+        } catch {
+          // ignore parse errors
         }
-      } catch {
-        // ignore parse errors
-      }
-    };
+      };
 
-    ws.onclose = () => {
+      ws.onclose = () => {
+        options.onClose?.();
+        if (!isDestroyed && reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+          reconnectAttempts++;
+          reconnectTimer = setTimeout(connect, 3000);
+        } else if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+          options.onError?.(new Error("Max reconnection attempts reached"));
+        }
+      };
+
+      ws.onerror = (error) => {
+        options.onError?.(error);
+      };
+    } catch (err) {
+      options.onError?.(err instanceof Error ? err : new Error("Connection failed"));
       options.onClose?.();
-      if (!isDestroyed) {
-        reconnectTimer = setTimeout(connect, 3000);
-      }
-    };
-
-    ws.onerror = (error) => {
-      options.onError?.(error);
-    };
+    }
   }
 
   function send(data: unknown) {

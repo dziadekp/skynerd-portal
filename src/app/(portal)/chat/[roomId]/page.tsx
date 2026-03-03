@@ -17,13 +17,14 @@ export default function ChatRoomPage() {
   const params = useParams();
   const roomId = params.roomId as string;
   const { user } = useAuth();
-  const { data: initialMessages, isLoading } = useChatMessages(roomId);
+  const { data: initialMessages, isLoading, isError, refetch } = useChatMessages(roomId);
   const markRead = useMarkRoomRead();
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [typingUsers, setTypingUsers] = useState<Map<number, string>>(new Map());
   const [isConnected, setIsConnected] = useState(false);
+  const [wsError, setWsError] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<ReturnType<typeof createPortalWebSocket> | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -49,6 +50,7 @@ export default function ChatRoomPage() {
 
   // Connect WebSocket
   useEffect(() => {
+    setWsError(false);
     const ws = createPortalWebSocket({
       roomId,
       onMessage: (data) => {
@@ -58,7 +60,6 @@ export default function ChatRoomPage() {
       onTyping: (data) => {
         if (data.is_typing) {
           setTypingUsers((prev) => new Map(prev).set(data.user_id, data.user_name));
-          // Clear after 5 seconds
           setTimeout(() => {
             setTypingUsers((prev) => {
               const next = new Map(prev);
@@ -74,8 +75,12 @@ export default function ChatRoomPage() {
           });
         }
       },
-      onOpen: () => setIsConnected(true),
+      onOpen: () => {
+        setIsConnected(true);
+        setWsError(false);
+      },
       onClose: () => setIsConnected(false),
+      onError: () => setWsError(true),
     });
 
     wsRef.current = ws;
@@ -104,6 +109,12 @@ export default function ChatRoomPage() {
 
   const typingNames = Array.from(typingUsers.values());
 
+  const connectionStatus = isConnected
+    ? "Connected"
+    : wsError
+      ? "Connection failed"
+      : "Connecting...";
+
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col">
       {/* Header */}
@@ -113,8 +124,11 @@ export default function ChatRoomPage() {
         </Link>
         <div>
           <h2 className="font-semibold">Chat</h2>
-          <p className="text-xs text-muted-foreground">
-            {isConnected ? "Connected" : "Connecting..."}
+          <p className={cn(
+            "text-xs",
+            isConnected ? "text-muted-foreground" : wsError ? "text-red-500" : "text-muted-foreground"
+          )}>
+            {connectionStatus}
           </p>
         </div>
       </div>
@@ -126,6 +140,13 @@ export default function ChatRoomPage() {
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-12 w-3/4 rounded-xl" />
             ))}
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center gap-3 p-8 text-center">
+            <p className="text-sm text-muted-foreground">Unable to load messages.</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              Try again
+            </Button>
           </div>
         ) : (
           <div className="space-y-3 px-2">

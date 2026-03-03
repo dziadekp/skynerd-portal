@@ -7,6 +7,7 @@ export function middleware(request: NextRequest) {
   // Public routes — skip auth check
   if (
     pathname === "/login" ||
+    pathname === "/auto-login" ||
     pathname.startsWith("/api/") ||
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico"

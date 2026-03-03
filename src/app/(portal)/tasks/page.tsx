@@ -146,16 +146,27 @@ export default function TasksPage() {
                         )}
                       </div>
 
-                      {/* Action buttons for Truss tasks */}
+                      {/* Action buttons for tasks */}
                       {!task.completed && task.action_url && (
                         <div className="mt-3 flex flex-wrap gap-2">
                           {task.action_type === "upload" ? (
-                            <Link href={task.action_url}>
-                              <Button size="sm" variant="default" className="h-7 text-xs gap-1.5">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-                                Upload Documents
-                              </Button>
-                            </Link>
+                            // Upload tasks: magic_link opens Truss native flow (external),
+                            // fallback to portal upload page (internal /documents/upload)
+                            task.action_url.startsWith("http") ? (
+                              <a href={task.action_url} target="_blank" rel="noopener noreferrer">
+                                <Button size="sm" variant="default" className="h-7 text-xs gap-1.5">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                                  Upload Documents
+                                </Button>
+                              </a>
+                            ) : (
+                              <Link href={task.action_url}>
+                                <Button size="sm" variant="default" className="h-7 text-xs gap-1.5">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                                  Upload Documents
+                                </Button>
+                              </Link>
+                            )
                           ) : task.action_type === "sign" ? (
                             <a href={task.action_url} target="_blank" rel="noopener noreferrer">
                               <Button size="sm" variant="default" className="h-7 text-xs gap-1.5">

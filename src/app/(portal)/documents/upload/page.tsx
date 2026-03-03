@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useCallback, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useFolders } from "@/hooks/use-api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -17,12 +17,25 @@ interface UploadFile {
   error?: string;
 }
 
-export default function UploadPage() {
+function UploadPageInner() {
+  const searchParams = useSearchParams();
+  const initialFolderId = searchParams.get("folder_id") || "";
+
   const [files, setFiles] = useState<UploadFile[]>([]);
-  const [folderId, setFolderId] = useState<string>("");
+  const [folderId, setFolderId] = useState<string>(initialFolderId);
   const [isDragging, setIsDragging] = useState(false);
   const { data: folders } = useFolders();
   const router = useRouter();
+
+  // Validate the URL-provided folder_id once folders load
+  useEffect(() => {
+    if (initialFolderId && folders) {
+      const exists = folders.some((f) => String(f.id) === initialFolderId);
+      if (!exists) {
+        setFolderId("");
+      }
+    }
+  }, [initialFolderId, folders]);
 
   const addFiles = useCallback((newFiles: FileList | File[]) => {
     const fileArray = Array.from(newFiles).map((file) => ({
@@ -41,13 +54,12 @@ export default function UploadPage() {
     }
   }
 
-  async function uploadFile(uploadFile: UploadFile, index: number) {
+  async function uploadFile(uploadFile: UploadFile, index: number): Promise<boolean> {
     setFiles((prev) =>
       prev.map((f, i) => (i === index ? { ...f, status: "uploading", progress: 10 } : f))
     );
 
     try {
-      // Single server-side call: MD5 + signed URL + S3 PUT + attach
       const proxyForm = new FormData();
       proxyForm.append("file", uploadFile.file);
       if (folderId) {
@@ -74,6 +86,7 @@ export default function UploadPage() {
           i === index ? { ...f, progress: 100, status: "done" } : f
         )
       );
+      return true;
     } catch (err) {
       setFiles((prev) =>
         prev.map((f, i) =>
@@ -82,17 +95,18 @@ export default function UploadPage() {
             : f
         )
       );
+      return false;
     }
   }
 
   async function handleUploadAll() {
-    const pending = files.filter((f) => f.status === "pending");
+    let successCount = 0;
     for (let i = 0; i < files.length; i++) {
       if (files[i].status === "pending") {
-        await uploadFile(files[i], i);
+        const ok = await uploadFile(files[i], i);
+        if (ok) successCount++;
       }
     }
-    const successCount = files.filter((f) => f.status === "done").length + pending.length;
     if (successCount > 0) {
       toast.success(`${successCount} file(s) uploaded successfully`);
     }
@@ -115,7 +129,7 @@ export default function UploadPage() {
             </SelectTrigger>
             <SelectContent>
               {folders.map((folder) => (
-                <SelectItem key={folder.id} value={folder.id}>
+                <SelectItem key={folder.id} value={String(folder.id)}>
                   {folder.name}
                 </SelectItem>
               ))}
@@ -158,7 +172,7 @@ export default function UploadPage() {
         <Card className="border-0 shadow-sm">
           <CardContent className="divide-y p-0">
             {files.map((f, index) => (
-              <div key={index} className="flex items-center gap-3 p-4">
+              <div key={`${f.file.name}-${f.file.size}-${index}`} className="flex items-center gap-3 p-4">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate">{f.file.name}</p>
                   <p className="text-xs text-muted-foreground">
@@ -203,5 +217,13 @@ export default function UploadPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function UploadPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Loading...</div>}>
+      <UploadPageInner />
+    </Suspense>
   );
 }

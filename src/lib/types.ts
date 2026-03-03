@@ -43,7 +43,8 @@ export interface Task {
   project_id: string | null;
   source: "skynerd" | "truss";
   action_url: string | null;
-  action_type?: "upload" | "sign" | "view";
+  action_type?: "upload" | "sign" | "view" | null;
+  folder_id?: string | null;
   is_overdue: boolean;
 }
 

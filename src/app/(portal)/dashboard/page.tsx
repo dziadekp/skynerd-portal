@@ -57,7 +57,7 @@ export default function DashboardPage() {
                 <CardTitle className="text-base font-semibold">Active Projects</CardTitle>
               </CardHeader>
               <CardContent>
-                {data.projects.length === 0 ? (
+                {!data.projects || data.projects.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No active projects.</p>
                 ) : (
                   <div className="space-y-3">
